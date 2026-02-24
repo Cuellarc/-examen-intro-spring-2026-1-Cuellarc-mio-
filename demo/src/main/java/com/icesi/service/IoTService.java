@@ -1,76 +1,41 @@
 package com.icesi.service;
 
-import com.icesi.model.Device;
-import com.icesi.repository.DeviceRepository;
-import com.icesi.repository.MeasurementRepository;
+import java.util.List;
+
 import org.springframework.stereotype.Service;
 
-import java.util.List;
+import com.icesi.model.Device;
+import com.icesi.model.Measurement;
+import com.icesi.repository.DeviceRepository;
+import com.icesi.repository.MeasurementRepository;
 
 @Service
 public class IoTService {
-
+    private Measurement measurement;
+    private Device device;
     private final DeviceRepository deviceRepo;
-    private final MeasurementRepository measRepo;
+    private final MeasurementRepository measuRepo;
 
     public IoTService(DeviceRepository deviceRepo, MeasurementRepository measRepo) {
         this.deviceRepo = deviceRepo;
-        this.measRepo = measRepo;
+        this.measuRepo = measuRepo;
     }
 
     public List<Device> getAllDevices() {
         return deviceRepo.findAll();
     }
 
-    public void registerDevice(Device device) {
-        if (device.getName() == null || device.getName().trim().isEmpty()) {
-            throw new RuntimeException("Nombre inválido (vacío o nulo).");
+    public void registerMeasurement(Measurement measurement) {   
+        // Valor fuera del rango
+        Double valor = measurement.getValor();
+        Double maxvalue = device.getMaxValue();
+        Double minvalue = device.getMinValue();
+
+        if (valor > maxvalue || valor < minvalue){
+            throw new RuntimeException("Valor de la medida fuera del rango del dispositivo");
         }
 
-        if (device.getSerialNumber() == null) {
-            throw new RuntimeException("serialNumber no puede ser null.");
-        }
-
-        String serial = device.getSerialNumber().trim();
-
-
-        // a) único
-        Device existing = deviceRepo.findBySerialNumber(serial);
-        if (existing != null) {
-            throw new RuntimeException("Ya existe un dispositivo con ese serialNumber.");
-        }
-
-        device.setSerialNumber(serial);
-
-
-
-        // crear (no update)
-        deviceRepo.add(device);
-    }
-
-    public void updateDeviceEstate(long deviceId, String newEstate) {
-        if (newEstate == null) throw new RuntimeException("Estado no puede ser null.");
-        validateEstate(newEstate);
-
-        Device d = deviceRepo.findById(deviceId);
-        if (d == null) throw new RuntimeException("No existe device con id=" + deviceId);
-
-        d.setEstate(newEstate.trim().toUpperCase());
-        deviceRepo.update(d);
-    }
-
-    public void deleteDevice(long deviceId) {
-        // d) no eliminar si tiene mediciones
-        if (!measRepo.findByAssetId(deviceId).isEmpty()) {
-            throw new RuntimeException("No se puede eliminar: tiene mediciones asociadas.");
-        }
-        deviceRepo.deleteById(deviceId);
-    }
-
-    private void validateEstate(String estate) {
-        String e = estate.trim().toUpperCase();
-        if (!e.equals("ACTIVE") && !e.equals("INACTIVE")) {
-            throw new RuntimeException("Estado inválido. Use ACTIVE o INACTIVE.");
-        }
+        // crear
+        measuRepo.add(measurement);
     }
 }
